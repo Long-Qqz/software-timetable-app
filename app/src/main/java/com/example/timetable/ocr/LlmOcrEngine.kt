@@ -109,19 +109,30 @@ class LlmOcrEngine(
     private fun callOpenAI(base: String, key: String, model: String, prompt: String, b64: String): String {
         // Base URL 需填到版本层（如 .../v1、.../v4），直接拼 /chat/completions
         val url = "${base.trimEnd('/')}/chat/completions"
+
+        val imagePart = JSONObject()
+            .put("type", "image_url")
+            .put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$b64"))
+        val textPart = JSONObject()
+            .put("type", "text")
+            .put("text", "请识别这张课表并输出 JSON")
+        val userContent = JSONArray()
+            .put(imagePart)
+            .put(textPart)
+        val sysMsg = JSONObject()
+            .put("role", "system")
+            .put("content", prompt)
+        val userMsg = JSONObject()
+            .put("role", "user")
+            .put("content", userContent)
         val body = JSONObject()
             .put("model", model)
             .put("temperature", 0)
-            .put("messages", JSONArray()
-                .put(JSONObject().put("role", "system").put("content", prompt))
-                .put(JSONObject().put("role", "user").put("content", JSONArray()
-                    .put(JSONObject().put("type", "image_url")
-                        .put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$b64")))
-                    .put(JSONObject().put("type", "text").put("text", "请识别这张课表并输出 JSON"))))
+            .put("messages", JSONArray().put(sysMsg).put(userMsg))
             .toString()
 
         val req = Request.Builder()
-            .url("$url/chat/completions")
+            .url(url)
             .header("Authorization", "Bearer $key")
             .post(body.toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
@@ -142,14 +153,17 @@ class LlmOcrEngine(
 
     private fun callGemini(base: String, key: String, model: String, prompt: String, b64: String): String {
         val url = "${base.trimEnd('/')}/v1beta/models/$model:generateContent?key=$key"
+
+        val textPart = JSONObject().put("text", "$prompt\n请识别这张课表并输出 JSON")
+        val imagePart = JSONObject()
+            .put("inline_data", JSONObject()
+                .put("mime_type", "image/jpeg")
+                .put("data", b64))
+        val userPart = JSONObject()
+            .put("role", "user")
+            .put("parts", JSONArray().put(textPart).put(imagePart))
         val body = JSONObject()
-            .put("contents", JSONArray().put(JSONObject()
-                .put("role", "user")
-                .put("parts", JSONArray()
-                    .put(JSONObject().put("text", "$prompt\n请识别这张课表并输出 JSON"))
-                    .put(JSONObject().put("inline_data", JSONObject()
-                        .put("mime_type", "image/jpeg")
-                        .put("data", b64))))))
+            .put("contents", JSONArray().put(userPart))
             .put("generationConfig", JSONObject().put("temperature", 0))
             .toString()
 

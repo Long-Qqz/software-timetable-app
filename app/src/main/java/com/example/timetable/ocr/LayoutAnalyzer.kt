@@ -268,41 +268,50 @@ object LayoutAnalyzer {
     // ===== 大模型结构化 JSON 解析（LlmOcrEngine 输出） =====
 
     /** 从大模型返回的单个课程 JSON 对象解析为 ParsedCourse */
-    fun parseCourseFromJson(json: String): ParsedCourse? = try {
-        val o = JSONObject(json)
-        val name = o.optString("name").trim()
-        if (name.isEmpty()) return null
+    fun parseCourseFromJson(json: String): ParsedCourse? {
+        return try {
+            val o = JSONObject(json)
+            val name = o.optString("name").trim()
+            if (name.isEmpty()) {
+                null
+            } else {
+                var day = o.optInt("day", 0)
+                if (day !in 1..5) {
+                    val dayName = o.optString("day").trim()
+                    val idx = listOf("星期一", "星期二", "星期三", "星期四", "星期五", "周一", "周二", "周三", "周四", "周五")
+                        .indexOfFirst { it == dayName }
+                    day = if (idx in 0..4) (idx % 5) + 1 else 0
+                }
+                if (day !in 1..5) {
+                    null
+                } else {
+                    val start = o.optInt("start", 0)
+                    if (start !in 1..13) {
+                        null
+                    } else {
+                        val end = o.optInt("end", start).coerceIn(start, 13)
 
-        var day = o.optInt("day", 0)
-        if (day !in 1..5) {
-            val dayName = o.optString("day").trim()
-            val idx = listOf("星期一", "星期二", "星期三", "星期四", "星期五", "周一", "周二", "周三", "周四", "周五")
-                .indexOfFirst { it == dayName }
-            day = if (idx in 0..4) (idx % 5) + 1 else 0
+                        val weeks = o.optString("weeks").trim().ifEmpty { "1-${TOTAL_WEEKS}" }
+                        val loc = o.optString("loc").trim().ifEmpty { "未知教室" }
+                        val teacher = o.optString("teacher").trim().ifEmpty { "未知教师" }
+                        val classes = o.optString("classes").trim().takeIf { it.isNotEmpty() }
+                        val major = o.optString("major").trim().takeIf { it.isNotEmpty() }
+
+                        val course = Course(
+                            name = name,
+                            day = day,
+                            classes = classes,
+                            loc = loc,
+                            teacher = teacher,
+                            sessions = listOf(Session(weeks = weeks, start = start, end = end))
+                        )
+                        ParsedCourse(course, major)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            null
         }
-        if (day !in 1..5) return null
-
-        val start = o.optInt("start", 0)
-        if (start !in 1..13) return null
-        val end = o.optInt("end", start).coerceIn(start, 13)
-
-        val weeks = o.optString("weeks").trim().ifEmpty { "1-${TOTAL_WEEKS}" }
-        val loc = o.optString("loc").trim().ifEmpty { "未知教室" }
-        val teacher = o.optString("teacher").trim().ifEmpty { "未知教师" }
-        val classes = o.optString("classes").trim().takeIf { it.isNotEmpty() }
-        val major = o.optString("major").trim().takeIf { it.isNotEmpty() }
-
-        val course = Course(
-            name = name,
-            day = day,
-            classes = classes,
-            loc = loc,
-            teacher = teacher,
-            sessions = listOf(Session(weeks = weeks, start = start, end = end))
-        )
-        ParsedCourse(course, major)
-    } catch (_: Exception) {
-        null
     }
 
     /** 大模型结果里汇总专业方向 */
