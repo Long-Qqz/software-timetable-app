@@ -24,9 +24,9 @@ import com.example.timetable.databinding.ActivityImportBinding
 import com.example.timetable.databinding.DialogCourseEditBinding
 import com.example.timetable.databinding.ItemCourseFixBinding
 import com.example.timetable.ocr.BaiduEngine
-import com.example.timetable.ocr.CustomOcrEngine
 import com.example.timetable.ocr.LayoutAnalyzer
 import com.example.timetable.ocr.LayoutAnalyzer.ParsedCourse
+import com.example.timetable.ocr.LlmOcrEngine
 import com.example.timetable.ocr.MlKitEngine
 import com.example.timetable.ocr.OcrConfigException
 import com.example.timetable.ocr.OcrEngine
@@ -76,7 +76,7 @@ class ImportActivity : AppCompatActivity() {
         // 恢复上次使用的识别引擎
         when (store.ocrMode()) {
             "baidu" -> binding.rbCloud.isChecked = true
-            "custom" -> binding.rbCustom.isChecked = true
+            "llm" -> binding.rbCustom.isChecked = true
             else -> binding.rbOffline.isChecked = true
         }
 
@@ -117,15 +117,16 @@ class ImportActivity : AppCompatActivity() {
     private fun recognize(bmp: Bitmap) {
         store.saveOcrMode(
             when {
-                binding.rbCustom.isChecked -> "custom"
+                binding.rbCustom.isChecked -> "llm"
                 binding.rbCloud.isChecked -> "baidu"
                 else -> "offline"
             }
         )
+        val isLlm = binding.rbCustom.isChecked
         val engine: OcrEngine = when {
-            binding.rbCustom.isChecked -> CustomOcrEngine(
-                store.ocrCustomUrl(), store.ocrCustomToken(),
-                store.ocrCustomImageField(), store.ocrCustomHeaders()
+            isLlm -> LlmOcrEngine(
+                store.llmPlatform(), store.llmBaseUrl(),
+                store.llmApiKey(), store.llmModel(), store.llmPrompt()
             )
             binding.rbCloud.isChecked -> BaiduEngine(store.baiduApiKey(), store.baiduSecretKey())
             else -> MlKitEngine()
@@ -139,10 +140,18 @@ class ImportActivity : AppCompatActivity() {
         scope.launch {
             try {
                 val result = withContext(Dispatchers.IO) { engine.recognize(bmp) }
-                val analysis = withContext(Dispatchers.Default) { LayoutAnalyzer.analyze(result) }
-                parsed.clear()
-                parsed.addAll(analysis.courses)
-                majors = analysis.majors
+                if (isLlm) {
+                    // 大模型直接返回结构化课程 JSON（每行一个对象），不走坐标版面分析
+                    val courses = result.lines.mapNotNull { LayoutAnalyzer.parseCourseFromJson(it.text) }
+                    parsed.clear()
+                    parsed.addAll(courses)
+                    majors = LayoutAnalyzer.extractMajorsFromJson(parsed)
+                } else {
+                    val analysis = withContext(Dispatchers.Default) { LayoutAnalyzer.analyze(result) }
+                    parsed.clear()
+                    parsed.addAll(analysis.courses)
+                    majors = analysis.majors
+                }
                 showAnalysis()
             } catch (e: OcrConfigException) {
                 Toast.makeText(this@ImportActivity, e.message ?: "识别引擎未配置", Toast.LENGTH_LONG).show()

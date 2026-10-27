@@ -7,7 +7,7 @@ import com.example.timetable.data.TimetableStore
 import com.example.timetable.databinding.ActivitySettingsBinding
 
 /**
- * 设置：学期开始日期（计算当前周）+ 百度云端 OCR Key（可选，仅存本地）。
+ * 设置：学期开始日期（计算当前周）+ 百度云端 OCR Key + 大模型识别配置（仅存本地）。
  */
 class SettingsActivity : AppCompatActivity() {
 
@@ -26,10 +26,16 @@ class SettingsActivity : AppCompatActivity() {
         binding.etDay.setText(term.get(java.util.Calendar.DAY_OF_MONTH).toString())
         binding.etAk.setText(store.baiduApiKey())
         binding.etSk.setText(store.baiduSecretKey())
-        binding.etCustomUrl.setText(store.ocrCustomUrl())
-        binding.etCustomToken.setText(store.ocrCustomToken())
-        binding.etCustomField.setText(store.ocrCustomImageField())
-        binding.etCustomHeaders.setText(store.ocrCustomHeaders())
+
+        // 大模型识别配置
+        when (store.llmPlatform()) {
+            "gemini" -> binding.rbLlmGemini.isChecked = true
+            else -> binding.rbLlmOpenai.isChecked = true
+        }
+        binding.etLlmBaseUrl.setText(store.llmBaseUrl())
+        binding.etLlmApiKey.setText(store.llmApiKey())
+        binding.etLlmModel.setText(store.llmModel())
+        binding.etLlmPrompt.setText(store.llmPrompt())
 
         binding.btnSave.setOnClickListener {
             val y = binding.etYear.text.toString().toIntOrNull()
@@ -41,10 +47,11 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "学期日期格式不正确", Toast.LENGTH_SHORT).show()
             }
             store.saveBaiduKeys(binding.etAk.text.toString(), binding.etSk.text.toString())
-            store.saveOcrCustomUrl(binding.etCustomUrl.text.toString())
-            store.saveOcrCustomToken(binding.etCustomToken.text.toString())
-            store.saveOcrCustomImageField(binding.etCustomField.text.toString())
-            store.saveOcrCustomHeaders(binding.etCustomHeaders.text.toString())
+            store.saveLlmPlatform(if (binding.rbLlmGemini.isChecked) "gemini" else "openai")
+            store.saveLlmBaseUrl(binding.etLlmBaseUrl.text.toString())
+            store.saveLlmApiKey(binding.etLlmApiKey.text.toString())
+            store.saveLlmModel(binding.etLlmModel.text.toString())
+            store.saveLlmPrompt(binding.etLlmPrompt.text.toString().trim())
             Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
             finish()
         }

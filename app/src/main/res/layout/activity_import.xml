@@ -89,7 +89,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="自定义 API（在设置配置任意接口）"
+            android:text="大模型识别（GPT-4o/Qwen-VL/GLM-4V 等，在设置配置）"
             android:textColor="@color/ink" />
     </RadioGroup>
 

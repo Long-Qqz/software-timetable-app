@@ -190,31 +190,37 @@ class TimetableStore(private val context: Context) {
         prefs.edit().putString("baidu_ak", ak.trim()).putString("baidu_sk", sk.trim()).apply()
     }
 
-    // ===== OCR 引擎选择与自定义 API 配置 =====
-    // ocr_mode: offline(默认，离线 ML Kit) / baidu / custom
+    // ===== OCR 引擎选择与大模型识别配置 =====
+    // ocr_mode: offline(默认，离线 ML Kit) / baidu / llm
     fun ocrMode(): String = prefs.getString("ocr_mode", "offline") ?: "offline"
     fun saveOcrMode(mode: String) {
         prefs.edit().putString("ocr_mode", mode).apply()
     }
 
-    fun ocrCustomUrl(): String = prefs.getString("ocr_custom_url", "") ?: ""
-    fun saveOcrCustomUrl(v: String) {
-        prefs.edit().putString("ocr_custom_url", v.trim()).apply()
+    // 大模型识别配置（LlmOcrEngine）
+    fun llmPlatform(): String = prefs.getString("llm_platform", "openai") ?: "openai" // openai / gemini
+    fun saveLlmPlatform(v: String) {
+        prefs.edit().putString("llm_platform", v).apply()
     }
 
-    fun ocrCustomToken(): String = prefs.getString("ocr_custom_token", "") ?: ""
-    fun saveOcrCustomToken(v: String) {
-        prefs.edit().putString("ocr_custom_token", v.trim()).apply()
+    fun llmBaseUrl(): String = prefs.getString("llm_base_url", "") ?: ""
+    fun saveLlmBaseUrl(v: String) {
+        prefs.edit().putString("llm_base_url", v.trim()).apply()
     }
 
-    fun ocrCustomImageField(): String = prefs.getString("ocr_custom_image_field", "image") ?: "image"
-    fun saveOcrCustomImageField(v: String) {
-        prefs.edit().putString("ocr_custom_image_field", v.trim().ifEmpty { "image" }).apply()
+    fun llmApiKey(): String = prefs.getString("llm_api_key", "") ?: ""
+    fun saveLlmApiKey(v: String) {
+        prefs.edit().putString("llm_api_key", v.trim()).apply()
     }
 
-    fun ocrCustomHeaders(): String = prefs.getString("ocr_custom_headers", "") ?: ""
-    fun saveOcrCustomHeaders(v: String) {
-        prefs.edit().putString("ocr_custom_headers", v.trim()).apply()
+    fun llmModel(): String = prefs.getString("llm_model", "") ?: ""
+    fun saveLlmModel(v: String) {
+        prefs.edit().putString("llm_model", v.trim()).apply()
+    }
+
+    fun llmPrompt(): String = prefs.getString("llm_prompt", "") ?: ""
+    fun saveLlmPrompt(v: String) {
+        prefs.edit().putString("llm_prompt", v.trim()).apply()
     }
 
     /** 上一次识别时用户选择的专业方向 */
