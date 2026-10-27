@@ -26,6 +26,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.etDay.setText(term.get(java.util.Calendar.DAY_OF_MONTH).toString())
         binding.etAk.setText(store.baiduApiKey())
         binding.etSk.setText(store.baiduSecretKey())
+        binding.etCustomUrl.setText(store.ocrCustomUrl())
+        binding.etCustomToken.setText(store.ocrCustomToken())
+        binding.etCustomField.setText(store.ocrCustomImageField())
+        binding.etCustomHeaders.setText(store.ocrCustomHeaders())
 
         binding.btnSave.setOnClickListener {
             val y = binding.etYear.text.toString().toIntOrNull()
@@ -37,6 +41,10 @@ class SettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "学期日期格式不正确", Toast.LENGTH_SHORT).show()
             }
             store.saveBaiduKeys(binding.etAk.text.toString(), binding.etSk.text.toString())
+            store.saveOcrCustomUrl(binding.etCustomUrl.text.toString())
+            store.saveOcrCustomToken(binding.etCustomToken.text.toString())
+            store.saveOcrCustomImageField(binding.etCustomField.text.toString())
+            store.saveOcrCustomHeaders(binding.etCustomHeaders.text.toString())
             Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
             finish()
         }

@@ -112,6 +112,73 @@
             android:hint="Secret Key（SK）"
             android:inputType="text" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="自定义 OCR API（可选）"
+            android:textColor="@color/ink"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="可接入任意「POST 图片 base64 返回 JSON」的识别接口（腾讯云/阿里云/讯飞等，建议返回带文字位置坐标的通用文字识别）。导入课表时选择「自定义 API」即可使用；识别结果统一按课表版面调教解析。"
+            android:textColor="@color/ink2"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/etCustomUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_input"
+            android:padding="10dp"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink2"
+            android:hint="接口地址（URL）"
+            android:inputType="textUri" />
+
+        <EditText
+            android:id="@+id/etCustomToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input"
+            android:padding="10dp"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink2"
+            android:hint="Token / API Key（自动加 Bearer 头，可留空）"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/etCustomField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input"
+            android:padding="10dp"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink2"
+            android:hint="请求体图片字段名（默认 image）"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/etCustomHeaders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input"
+            android:padding="10dp"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink2"
+            android:hint="附加请求头 JSON（可选），如 {&quot;X-Api-Key&quot;:&quot;xxx&quot;}"
+            android:inputType="text"
+            android:singleLine="false"
+            android:minLines="2" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"

@@ -21,9 +21,6 @@ class BaiduEngine(
     private val secretKey: String
 ) : OcrEngine {
 
-    class OcrConfigException(message: String) : Exception(message)
-    class OcrRemoteException(message: String) : Exception(message)
-
     override val label: String = "云端识别（百度）"
 
     private val client = OkHttpClient.Builder()

@@ -66,13 +66,13 @@
         android:id="@+id/rgEngine"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <RadioButton
             android:id="@+id/rbOffline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="离线识别（推荐）"
+            android:text="离线识别（推荐，无需联网）"
             android:textColor="@color/ink"
             android:checked="true" />
 
@@ -80,8 +80,16 @@
             android:id="@+id/rbCloud"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="16dp"
-            android:text="百度云端"
+            android:layout_marginTop="4dp"
+            android:text="百度云端（需在设置填 Key）"
+            android:textColor="@color/ink" />
+
+        <RadioButton
+            android:id="@+id/rbCustom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="自定义 API（在设置配置任意接口）"
             android:textColor="@color/ink" />
     </RadioGroup>
 

@@ -24,10 +24,13 @@ import com.example.timetable.databinding.ActivityImportBinding
 import com.example.timetable.databinding.DialogCourseEditBinding
 import com.example.timetable.databinding.ItemCourseFixBinding
 import com.example.timetable.ocr.BaiduEngine
+import com.example.timetable.ocr.CustomOcrEngine
 import com.example.timetable.ocr.LayoutAnalyzer
 import com.example.timetable.ocr.LayoutAnalyzer.ParsedCourse
 import com.example.timetable.ocr.MlKitEngine
+import com.example.timetable.ocr.OcrConfigException
 import com.example.timetable.ocr.OcrEngine
+import com.example.timetable.ocr.OcrRemoteException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,6 +73,13 @@ class ImportActivity : AppCompatActivity() {
         }
         binding.btnGenerate.setOnClickListener { generate() }
 
+        // 恢复上次使用的识别引擎
+        when (store.ocrMode()) {
+            "baidu" -> binding.rbCloud.isChecked = true
+            "custom" -> binding.rbCustom.isChecked = true
+            else -> binding.rbOffline.isChecked = true
+        }
+
         binding.rvCourses.layoutManager = LinearLayoutManager(this)
         binding.rvCourses.adapter = adapter
     }
@@ -105,10 +115,20 @@ class ImportActivity : AppCompatActivity() {
     }
 
     private fun recognize(bmp: Bitmap) {
-        val engine: OcrEngine = if (binding.rbOffline.isChecked) {
-            MlKitEngine()
-        } else {
-            BaiduEngine(store.baiduApiKey(), store.baiduSecretKey())
+        store.saveOcrMode(
+            when {
+                binding.rbCustom.isChecked -> "custom"
+                binding.rbCloud.isChecked -> "baidu"
+                else -> "offline"
+            }
+        )
+        val engine: OcrEngine = when {
+            binding.rbCustom.isChecked -> CustomOcrEngine(
+                store.ocrCustomUrl(), store.ocrCustomToken(),
+                store.ocrCustomImageField(), store.ocrCustomHeaders()
+            )
+            binding.rbCloud.isChecked -> BaiduEngine(store.baiduApiKey(), store.baiduSecretKey())
+            else -> MlKitEngine()
         }
 
         binding.progress.isVisible = true
@@ -124,8 +144,10 @@ class ImportActivity : AppCompatActivity() {
                 parsed.addAll(analysis.courses)
                 majors = analysis.majors
                 showAnalysis()
-            } catch (e: BaiduEngine.OcrConfigException) {
-                Toast.makeText(this@ImportActivity, e.message ?: "云端识别未配置", Toast.LENGTH_LONG).show()
+            } catch (e: OcrConfigException) {
+                Toast.makeText(this@ImportActivity, e.message ?: "识别引擎未配置", Toast.LENGTH_LONG).show()
+            } catch (e: OcrRemoteException) {
+                Toast.makeText(this@ImportActivity, e.message ?: "云端识别失败", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Toast.makeText(this@ImportActivity, "识别失败：${e.message}", Toast.LENGTH_LONG).show()
             } finally {

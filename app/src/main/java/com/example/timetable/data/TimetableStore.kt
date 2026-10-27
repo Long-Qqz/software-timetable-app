@@ -190,6 +190,33 @@ class TimetableStore(private val context: Context) {
         prefs.edit().putString("baidu_ak", ak.trim()).putString("baidu_sk", sk.trim()).apply()
     }
 
+    // ===== OCR 引擎选择与自定义 API 配置 =====
+    // ocr_mode: offline(默认，离线 ML Kit) / baidu / custom
+    fun ocrMode(): String = prefs.getString("ocr_mode", "offline") ?: "offline"
+    fun saveOcrMode(mode: String) {
+        prefs.edit().putString("ocr_mode", mode).apply()
+    }
+
+    fun ocrCustomUrl(): String = prefs.getString("ocr_custom_url", "") ?: ""
+    fun saveOcrCustomUrl(v: String) {
+        prefs.edit().putString("ocr_custom_url", v.trim()).apply()
+    }
+
+    fun ocrCustomToken(): String = prefs.getString("ocr_custom_token", "") ?: ""
+    fun saveOcrCustomToken(v: String) {
+        prefs.edit().putString("ocr_custom_token", v.trim()).apply()
+    }
+
+    fun ocrCustomImageField(): String = prefs.getString("ocr_custom_image_field", "image") ?: "image"
+    fun saveOcrCustomImageField(v: String) {
+        prefs.edit().putString("ocr_custom_image_field", v.trim().ifEmpty { "image" }).apply()
+    }
+
+    fun ocrCustomHeaders(): String = prefs.getString("ocr_custom_headers", "") ?: ""
+    fun saveOcrCustomHeaders(v: String) {
+        prefs.edit().putString("ocr_custom_headers", v.trim()).apply()
+    }
+
     /** 上一次识别时用户选择的专业方向 */
     fun lastMajor(): String = prefs.getString("last_major", "") ?: ""
     fun saveLastMajor(major: String) {
