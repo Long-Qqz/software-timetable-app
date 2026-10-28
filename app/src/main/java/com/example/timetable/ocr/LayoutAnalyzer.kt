@@ -285,17 +285,35 @@ object LayoutAnalyzer {
                 if (day !in 1..5) {
                     null
                 } else {
-                    val start = o.optInt("start", 0)
+                    var start = o.optInt("start", 0)
                     if (start !in 1..13) {
                         null
                     } else {
-                        val end = o.optInt("end", start).coerceIn(start, 13)
+                        var end = o.optInt("end", start).coerceIn(start, 13)
 
-                        val weeks = o.optString("weeks").trim().ifEmpty { "1-${TOTAL_WEEKS}" }
+                        val rawWeeks = o.optString("weeks").trim()
+                        // 启发式修正：weeks 若以 "x-y节" 开头（大模型常把合并单元格的节次区间写错），
+                        // 用前缀覆盖 start/end。如 "6-11节9-14周" → start=6 end=11；"1-4节1-16周" → start=1 end=4
+                        val period = Regex("^(\\d+)(?:-(\\d+))?\\s*节").find(rawWeeks)
+                        if (period != null) {
+                            val s1 = period.groupValues[1].toInt()
+                            val s2 = period.groupValues[2].toIntOrNull() ?: s1
+                            if (s1 in 1..13 && s2 in s1..13) {
+                                start = s1; end = s2
+                            }
+                        }
+
+                        val weeks = cleanWeeksFromJson(rawWeeks).ifEmpty { "1-${TOTAL_WEEKS}" }
                         val loc = o.optString("loc").trim().ifEmpty { "未知教室" }
-                        val teacher = o.optString("teacher").trim().ifEmpty { "未知教师" }
-                        val classes = o.optString("classes").trim().takeIf { it.isNotEmpty() }
-                        val major = o.optString("major").trim().takeIf { it.isNotEmpty() }
+                        val teacher = o.optString("teacher").trim()
+                        val classes = o.optString("classes").trim()
+                            .takeIf { it.isNotEmpty() && !it.equals("null", true) }
+                        val majorRaw = o.optString("major").trim()
+                        // 归一化：大模型常把 null 写成字符串 "null"/"无"/"none"，统一转回真 null（公共课）
+                        val major = majorRaw.takeUnless {
+                            it.isEmpty() || it.equals("null", true) || it.equals("无", true) ||
+                                it.equals("none", true) || it.equals("-", true)
+                        }
 
                         val course = Course(
                             name = name,
@@ -312,6 +330,31 @@ object LayoutAnalyzer {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** 清洗大模型 weeks 字段：去 "x-y节" 前缀、去 "周" 字、保留单双周标记。
+     *  "1-4节1-16周,6,14-17周" → "1-16,6,14-17"
+     *  "6-8节4-6周(双),7,14-17,18周" → "4-6双,7,14-17,18"
+     *  "9-13周(单),17周" → "9-13单,17"
+     */
+    private fun cleanWeeksFromJson(raw: String): String {
+        var s = raw.trim().replace('，', ',')
+        // 去掉节次前缀（"1-4节"、"6-11节"、"10-13节"）
+        s = Regex("^\\s*\\d+(?:-\\d+)?\\s*节").replaceFirst(s, "").trim()
+        if (s.isEmpty()) return ""
+        val parts = s.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        val cleaned = parts.mapNotNull { p ->
+            val q = p.replace('（', '(').replace('）', ')')
+            val m = Regex("^(\\d+(?:-\\d+)?)\\s*周?\\s*(?:\\((单|双)\\))?").find(q)
+            if (m != null) {
+                val num = m.groupValues[1]
+                val parity = m.groupValues[2]
+                if (parity.isEmpty()) num else "$num$parity"
+            } else {
+                p
+            }
+        }
+        return cleaned.joinToString(",")
     }
 
     /** 大模型结果里汇总专业方向 */
