@@ -59,7 +59,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="▲ 展开识别设置（引擎 / 专业 / 粘贴导入）"
+        android:text="▲ 展开识别设置（引擎 / 粘贴导入）"
         android:textColor="@color/primary_dark"
         android:textSize="12sp"
         android:textStyle="bold"
@@ -111,23 +111,6 @@
                 android:textColor="@color/ink" />
         </RadioGroup>
 
-        <TextView
-            android:id="@+id/tvMajor"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/ink"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <RadioGroup
-            android:id="@+id/rgMajor"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:visibility="gone" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -170,6 +153,23 @@
             android:textColor="@color/ink2"
             android:textSize="11sp" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvMajor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/ink"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <RadioGroup
+        android:id="@+id/rgMajor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone" />
 
     <TextView
         android:layout_width="wrap_content"

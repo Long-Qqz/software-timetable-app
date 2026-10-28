@@ -80,7 +80,8 @@ class TimetableView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         val topSpace = if (editMode) zeroSlotH else pad
-        setMeasuredDimension(w, rowH * 13 + topSpace + pad)
+        // 网格 13 行 + 表头(headH) + 顶部空间 + 底部边距
+        setMeasuredDimension(w, rowH * 13 + topSpace + headH + pad)
     }
 
     private fun dayWidth(): Float {
@@ -88,7 +89,11 @@ class TimetableView @JvmOverloads constructor(
         return (w - pad * 2 - periodW) / 5f
     }
 
-    private fun gridTop(): Float = (if (editMode) zeroSlotH else pad).toFloat()
+    /** 网格起点：表头(headH)之下 */
+    private fun gridTop(): Float = (if (editMode) zeroSlotH else pad).toFloat() + headH
+
+    /** 表头顶部 */
+    private fun headTop(): Float = (if (editMode) zeroSlotH else pad).toFloat()
 
     private fun dayFromX(x: Float): Int {
         val dayW = dayWidth()
@@ -97,8 +102,9 @@ class TimetableView @JvmOverloads constructor(
     }
 
     private fun periodFromY(y: Float): Int {
+        if (editMode && y < zeroSlotH) return 0
         val g = gridTop()
-        if (y < g) return if (editMode) 0 else 1
+        if (y < g) return 1
         val v = ((y - g) / rowH).toInt() + 1
         return v.coerceIn(1, 13)
     }
@@ -127,7 +133,7 @@ class TimetableView @JvmOverloads constructor(
         // 编辑模式：顶部 0 节拖放槽（拖入课程到此处 = 该天不上该课）
         if (editMode) {
             val active = dragTargetVisible && dragPeriod == 0
-            val zRect = RectF(pad.toFloat(), dpf(4), pad + periodW + dayW * 5, y0 - dpf(4))
+            val zRect = RectF(pad.toFloat(), dpf(4), pad + periodW + dayW * 5, headTop() - dpf(4))
             canvas.drawRoundRect(
                 zRect, dpf(6), dpf(6),
                 Paint().apply { color = if (active) 0xFFFEE2E2.toInt() else 0xFFF1F5F9.toInt() }
@@ -160,9 +166,9 @@ class TimetableView @JvmOverloads constructor(
         // 星期表头
         for (i in 0 until 5) {
             val x = pad + periodW + i * dayW
-            if (isToday(i)) canvas.drawRect(x, y0, x + dayW, y0 + headH.toFloat(), Paint().apply { color = 0xFFEFF6FF.toInt() })
-            drawCenterText(canvas, Timetable.DAY_NAMES[i], x, y0, dayW, headH.toFloat(), headPaint)
-            canvas.drawLine(x, y0, x, bottom, linePaint)
+            if (isToday(i)) canvas.drawRect(x, headTop(), x + dayW, headTop() + headH.toFloat(), Paint().apply { color = 0xFFEFF6FF.toInt() })
+            drawCenterText(canvas, Timetable.DAY_NAMES[i], x, headTop(), dayW, headH.toFloat(), headPaint)
+            canvas.drawLine(x, headTop(), x, bottom, linePaint)
         }
 
         // 网格行
@@ -326,8 +332,12 @@ class TimetableView @JvmOverloads constructor(
         val locRest = course.loc.removePrefix(locCode).trim()
         roomPaint.textSize = dpf(11)
         roomPaint.typeface = Typeface.DEFAULT_BOLD
+        // 徽章不超出卡片：文字太长时按可用宽度等比缩小字号，保证完整显示不截断
+        val maxBadgeText = (innerW - dpf(8)).toFloat()
+        val textW0 = roomPaint.measureText(locCode)
+        if (textW0 > maxBadgeText) roomPaint.textSize = dpf(11) * maxBadgeText / textW0
         val textW = roomPaint.measureText(locCode)
-        val badgeW = (textW + dpf(10)).toInt()
+        val badgeW = minOf((textW + dpf(10)).toInt(), innerW)
         val badgeH = dpf(16)
         if (fits(badgeH.toInt())) {
             val bRect = RectF(x + padX, cursor, x + padX + badgeW, cursor + badgeH)
