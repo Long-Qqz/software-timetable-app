@@ -76,6 +76,8 @@ class ImportActivity : AppCompatActivity() {
         binding.btnGenerate.setOnClickListener { generate() }
         binding.btnCopyPrompt.setOnClickListener { copyPrompt() }
         binding.btnPasteJson.setOnClickListener { showPasteJsonDialog() }
+        // 识别出结果后，把上方识别设置区（红框范围）暂时隐藏，给结果列表腾出空间
+        binding.btnExpandSettings.setOnClickListener { setSettingsHidden(false) }
 
         // 恢复上次使用的识别引擎
         when (store.ocrMode()) {
@@ -205,6 +207,8 @@ class ImportActivity : AppCompatActivity() {
         }
         adapter.notifyDataSetChanged()
         binding.btnGenerate.isEnabled = parsed.isNotEmpty()
+        // 有识别结果时自动隐藏上方设置区（引擎/专业/复制粘贴+说明），给结果列表腾空间
+        setSettingsHidden(parsed.isNotEmpty())
     }
 
     /** 按专业过滤：保留公共课（无专业方向）与所选专业课程 */
@@ -297,6 +301,12 @@ class ImportActivity : AppCompatActivity() {
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
+    /** 识别出结果后默认隐藏识别设置区（引擎/专业/复制粘贴+说明），只留结果列表与生成按钮 */
+    private fun setSettingsHidden(hidden: Boolean) {
+        binding.llHideZone.isVisible = !hidden
+        binding.btnExpandSettings.isVisible = hidden
+    }
+
     private fun showEditDialog(index: Int) {
         val item = parsed[index]
         val b = DialogCourseEditBinding.inflate(layoutInflater)
@@ -368,6 +378,8 @@ class ImportActivity : AppCompatActivity() {
                 list.removeAt(position)
                 notifyItemRemoved(position)
                 binding.btnGenerate.isEnabled = list.isNotEmpty()
+                // 全部删光后自动展开识别设置区
+                if (list.isEmpty()) setSettingsHidden(false)
             }
         }
     }

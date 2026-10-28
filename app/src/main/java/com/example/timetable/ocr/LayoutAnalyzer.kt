@@ -320,7 +320,10 @@ object LayoutAnalyzer {
                             }
                         }
 
-                        val weeks = cleanWeeksFromJson(rawWeeks).ifEmpty { "1-${TOTAL_WEEKS}" }
+                        var weeks = cleanWeeksFromJson(rawWeeks)
+                        // 启发式：大模型把节次区间误写进 weeks 首位（如 "6-8,12-14,18" 的 "6-8" 其实是节次）。
+                        // 首段为纯数字区间、起点等于 start、且 start 在下午时段(≥5)时视为节次混入，删除。
+                        weeks = stripLeadingPeriodIfSession(weeks, start).ifEmpty { "1-${TOTAL_WEEKS}" }
                         val loc = o.optString("loc").trim().ifEmpty { "未知教室" }
                         val teacher = o.optString("teacher").trim()
                         val classes = o.optString("classes").trim()
@@ -367,6 +370,21 @@ object LayoutAnalyzer {
             }
         }
         return cleaned.joinToString(",")
+    }
+
+    /** 启发式：删除 weeks 首位混入的节次段。
+     *  大模型常把节次区间写进 weeks 开头（如 "6-8,12-14,18"、"6-7,9-13单,17"），
+     *  当首段为纯数字区间、起点等于 start、且 start 在下午时段(≥5)时视为节次混入并删除。
+     *  例："6-8,12-14,18" start=6 → "12-14,18"；"6-7,9-13单,17" start=6 → "9-13单,17"。 */
+    private fun stripLeadingPeriodIfSession(weeks: String, start: Int): String {
+        val parts = weeks.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        if (parts.size < 2 || start < 5) return weeks
+        val first = parts[0]
+        if (first.contains("单") || first.contains("双")) return weeks
+        val m = Regex("^(\\d{1,2})(?:-(\\d{1,2}))?$").find(first) ?: return weeks
+        val a = m.groupValues[1].toInt()
+        val b = m.groupValues[2].toIntOrNull() ?: a
+        return if (a == start && b in a..13) parts.drop(1).joinToString(",") else weeks
     }
 
     /** 大模型结果里汇总专业方向（仅保留白名单内的真实方向） */
