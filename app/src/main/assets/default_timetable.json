@@ -11,7 +11,7 @@
   {"name":"软件体系结构与架构技术","day":3,"classes":"1班","loc":"B2-406 生成式AI创新实验室","teacher":"王亚洲","sessions":[{"weeks":"1","start":6,"end":9},{"weeks":"9","start":10,"end":13,"makeup":true,"note":"由第6周周二晚调课补上"}]},
   {"name":"Web服务器端开发","day":3,"classes":"1、2班","loc":"B2-410 区块链与信息安全实验室","teacher":"金刚波","sessions":[{"weeks":"18","start":10,"end":13}]},
   {"name":"软件体系结构与架构技术","day":4,"classes":"1班","loc":"B2-406 生成式AI创新实验室","teacher":"王亚洲","sessions":[{"weeks":"8","start":6,"end":9,"makeup":true,"note":"由第4周周二晚调课补上"}]},
-  {"name":"形势与政策","day":4,"classes":"1、2班","loc":"B5-1-1楼102合班教室","teacher":"向丽丽","sessions":[{"weeks":"9-13单,17","start":6,"end":7}]},
+  {"name":"形势与政策","day":4,"classes":"1、2班","loc":"B5-102 合班教室","teacher":"向丽丽","sessions":[{"weeks":"9-13单,17","start":6,"end":7}]},
   {"name":"软件工程综合实践","day":4,"classes":"1班","loc":"B2-422 软件技术实验室","teacher":"胡绵发","sessions":[{"weeks":"15-16","start":6,"end":9}]},
   {"name":"软件工程综合实践","day":5,"classes":"1班","loc":"B2-422 软件技术实验室","teacher":"胡绵发","sessions":[{"weeks":"16","start":1,"end":4}]},
   {"name":"软件质量保证与测试","day":5,"classes":"1班","loc":"B2-406 生成式AI创新实验室","teacher":"赵煦华","sessions":[{"weeks":"1-2,5-11","start":6,"end":9},{"weeks":"12-14,18","start":6,"end":8}]},

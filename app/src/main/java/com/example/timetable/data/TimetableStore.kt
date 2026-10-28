@@ -211,7 +211,7 @@ class TimetableStore(private val context: Context) {
         Course("软件体系结构与架构技术", 4, "1班", "B2-406 生成式AI创新实验室", "王亚洲", listOf(
             Session("8", 6, 9, makeup = true, note = "由第4周周二晚调课补上")
         )),
-        Course("形势与政策", 4, "1、2班", "B5-1-1楼102合班教室", "向丽丽", listOf(
+        Course("形势与政策", 4, "1、2班", "B5-102 合班教室", "向丽丽", listOf(
             Session("9-13单,17", 6, 7)
         )),
         Course("软件工程综合实践", 4, "1班", "B2-422 软件技术实验室", "胡绵发", listOf(
