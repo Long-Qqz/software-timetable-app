@@ -329,7 +329,7 @@ class TimetableView @JvmOverloads constructor(
 
         // 教室：白底编号徽章 + 白字后缀
         val locCode = roomCode(course.loc)
-        val locRest = course.loc.removePrefix(locCode).trim()
+        val locRest = course.loc.split(' ').drop(1).joinToString(" ").trim()
         roomPaint.textSize = dpf(11)
         roomPaint.typeface = Typeface.DEFAULT_BOLD
         // 徽章不超出卡片：文字太长时按可用宽度等比缩小字号，保证完整显示不截断
@@ -402,8 +402,10 @@ class TimetableView @JvmOverloads constructor(
 
     private fun roomCode(loc: String): String {
         val parts = loc.split(' ')
-        if (parts.size > 1) return parts[0]
-        return loc.replace(Regex("合班教室$"), "")
+        val code = if (parts.size > 1) parts[0] else loc.replace(Regex("合班教室$"), "").trim()
+        // 统一教室号格式：B5-1-1楼102 / B5-1-102 这类 OCR 怪格式 → B5-102（楼栋-楼层-房间）
+        val m = Regex("^([A-Za-z]\\d+)-(\\d+)-?(\\d*)楼?(\\d{3})$").find(code)
+        return if (m != null) m.groupValues[1] + "-" + m.groupValues[4] else code
     }
 
     private data class TapTarget(val rect: RectF, val course: Course, val sess: Session)
