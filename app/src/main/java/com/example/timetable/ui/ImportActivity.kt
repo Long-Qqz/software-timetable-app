@@ -1,6 +1,7 @@
 package com.example.timetable.ui
 
 import android.app.Activity
+import android.content.ClipData
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -9,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -72,6 +74,8 @@ class ImportActivity : AppCompatActivity() {
             recognize(bmp)
         }
         binding.btnGenerate.setOnClickListener { generate() }
+        binding.btnCopyPrompt.setOnClickListener { copyPrompt() }
+        binding.btnPasteJson.setOnClickListener { showPasteJsonDialog() }
 
         // 恢复上次使用的识别引擎
         when (store.ocrMode()) {
@@ -217,11 +221,81 @@ class ImportActivity : AppCompatActivity() {
         if (parsed.isEmpty()) { Toast.makeText(this, "没有可生成的课程", Toast.LENGTH_SHORT).show(); return }
         val courses = filterByMajor(parsed)
         if (courses.isEmpty()) { Toast.makeText(this, "所选专业没有课程", Toast.LENGTH_SHORT).show(); return }
+        // 导入的课表默认放入一个新的独立课表，不覆盖现有课表
+        val now = java.text.SimpleDateFormat("M月d日 HH:mm", java.util.Locale.CHINA)
+            .format(java.util.Date())
+        store.createTimetable("导入课表 $now")
         store.saveCourses(courses)
-        Toast.makeText(this, "课表已生成（${courses.size} 门课）", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "已生成新课表「导入课表 $now」（${courses.size} 门课）", Toast.LENGTH_SHORT).show()
         setResult(Activity.RESULT_OK)
         finish()
     }
+
+    /** 复制课表识别调教提示词到剪贴板（用户发给第三方大模型用） */
+    private fun copyPrompt() {
+        val prompt = store.llmPrompt().ifBlank { com.example.timetable.ocr.LlmOcrEngine.DEFAULT_PROMPT }
+        val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("ocr_prompt", prompt))
+        Toast.makeText(this, "识别提示词已复制\n发给任意大模型并附上课表图片，把返回的 JSON 粘贴回来即可", Toast.LENGTH_LONG).show()
+    }
+
+    /** 粘贴大模型返回的 JSON，解析为课程进入校正流程 */
+    private fun showPasteJsonDialog() {
+        val et = EditText(this).apply {
+            hint = "粘贴大模型返回的 JSON 数组…"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            minLines = 8
+            maxLines = 14
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("粘贴大模型结果导入")
+            .setMessage("先点「复制识别提示词」发给任意大模型（附上课表图片），把返回的 JSON 粘贴到这里，将自动识别课程并进入校正。")
+            .setView(et)
+            .setPositiveButton("解析导入") { _, _ ->
+                importFromJson(et.text.toString())
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    /** 解析大模型返回的 JSON（兼容 markdown 围栏与 {"courses":[...]} 包装） */
+    private fun importFromJson(raw: String) {
+        val text = raw.trim()
+        if (text.isEmpty()) { Toast.makeText(this, "请先粘贴 JSON 内容", Toast.LENGTH_SHORT).show(); return }
+        val fence = Regex("```(?:json)?\\s*([\\s\\S]*?)```").find(text)
+        val body = (fence?.groupValues?.get(1) ?: text).trim()
+        val arr = try {
+            if (body.startsWith("[")) {
+                org.json.JSONArray(body)
+            } else {
+                org.json.JSONObject(body).optJSONArray("courses")
+            }
+        } catch (_: Exception) {
+            null
+        }
+        if (arr == null || arr.length() == 0) {
+            Toast.makeText(this, "没有解析到课程 JSON，请检查粘贴内容是否为课表 JSON 数组", Toast.LENGTH_LONG).show()
+            return
+        }
+        val items = mutableListOf<ParsedCourse>()
+        for (i in 0 until arr.length()) {
+            LayoutAnalyzer.parseCourseFromJson(arr.getJSONObject(i).toString())?.let { items.add(it) }
+        }
+        if (items.isEmpty()) {
+            Toast.makeText(this, "JSON 里没有可识别的课程字段（name/day/start/end/weeks）", Toast.LENGTH_LONG).show()
+            return
+        }
+        parsed.clear()
+        parsed.addAll(items)
+        majors = LayoutAnalyzer.extractMajorsFromJson(parsed)
+        selectedMajor = store.lastMajor().takeIf { it in majors }
+        showAnalysis()
+        Toast.makeText(this, "解析到 ${items.size} 门课程，可点击校正后生成", Toast.LENGTH_LONG).show()
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun showEditDialog(index: Int) {
         val item = parsed[index]

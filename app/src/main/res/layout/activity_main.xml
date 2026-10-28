@@ -18,6 +18,7 @@
         android:gravity="center_vertical">
 
         <TextView
+            android:id="@+id/tvTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -25,6 +26,16 @@
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnTimetables"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:text="课表"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:background="?attr/selectableItemBackground" />
 
         <TextView
             android:id="@+id/btnEdit"

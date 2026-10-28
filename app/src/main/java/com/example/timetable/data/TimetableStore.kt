@@ -8,16 +8,125 @@ import java.util.Calendar
 
 /**
  * 课表与设置的本地持久化（SharedPreferences + JSON）。
- * 云端 OCR 的百度 Key 只存本地，不上传。
+ * 云端 OCR 的百度 Key / 大模型 Key 只存本地，不上传。
+ *
+ * 多课表：timetable_v2 存 {current: 当前课表id, list: {id: {name, courses}}}
+ * 首次启动自动迁移旧版 courses_json 为第一个课表「我的课表」。
  */
 class TimetableStore(private val context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("timetable", Context.MODE_PRIVATE)
 
-    // ===== 课表 =====
+    private val KEY_V2 = "timetable_v2"
 
+    // ===== 课表（多课表） =====
+
+    /** 读多课表数据（懒迁移旧版 courses_json） */
+    private fun data(): JSONObject {
+        val raw = prefs.getString(KEY_V2, null)
+        if (raw != null) {
+            try {
+                val d = JSONObject(raw)
+                if (d.has("list")) return d
+            } catch (_: Exception) { /* 损坏则重建 */ }
+        }
+        // 迁移：旧版单一课表 courses_json → 第一个课表「我的课表」
+        val old = prefs.getString("courses_json", null)
+        val courses = if (old != null) {
+            try { JSONArray(old) } catch (_: Exception) { JSONArray() }
+        } else {
+            JSONArray()
+        }
+        val list = JSONObject()
+        val first = JSONObject().put("name", "我的课表").put("courses", courses)
+        list.put("default", first)
+        val d = JSONObject().put("current", "default").put("list", list)
+        prefs.edit().putString(KEY_V2, d.toString()).apply()
+        return d
+    }
+
+    private fun saveData(d: JSONObject) {
+        prefs.edit().putString(KEY_V2, d.toString()).apply()
+    }
+
+    /** 全部课表：id → (名称, 课程数) */
+    fun listTimetables(): List<Pair<String, String>> {
+        val d = data()
+        val list = d.optJSONObject("list") ?: return emptyList()
+        val out = mutableListOf<Pair<String, String>>()
+        val keys = list.keys()
+        while (keys.hasNext()) {
+            val id = keys.next()
+            val o = list.optJSONObject(id) ?: continue
+            val name = o.optString("name").ifBlank { "未命名课表" }
+            val count = o.optJSONArray("courses")?.length() ?: 0
+            out.add(id to "$name（$count 门课）")
+        }
+        return out
+    }
+
+    fun currentTimetableId(): String {
+        val d = data()
+        val cur = d.optString("current")
+        return if (d.optJSONObject("list")?.has(cur) == true) cur else "default"
+    }
+
+    fun currentTimetableName(): String {
+        val d = data()
+        val list = d.optJSONObject("list") ?: return "我的课表"
+        return list.optJSONObject(currentTimetableId())?.optString("name")?.ifBlank { "我的课表" } ?: "我的课表"
+    }
+
+    /** 当前课表的课程 */
+    fun loadCourses(): List<Course> {
+        val d = data()
+        val list = d.optJSONObject("list") ?: return emptyList()
+        val o = list.optJSONObject(currentTimetableId()) ?: return emptyList()
+        return parseCourses(o.optJSONArray("courses")?.toString().orEmpty())
+    }
+
+    /** 写当前课表的课程 */
     fun saveCourses(courses: List<Course>) {
+        val d = data()
+        val list = d.optJSONObject("list") ?: return
+        val o = list.optJSONObject(currentTimetableId()) ?: return
+        o.put("courses", coursesToArray(courses))
+        saveData(d)
+    }
+
+    /** 新建空课表并切换为当前，返回新课表 id */
+    fun createTimetable(name: String): String {
+        val d = data()
+        val list = d.optJSONObject("list") ?: JSONObject().also { d.put("list", it) }
+        val id = "tt${System.currentTimeMillis()}"
+        list.put(id, JSONObject().put("name", name).put("courses", JSONArray()))
+        d.put("current", id)
+        saveData(d)
+        return id
+    }
+
+    fun switchTimetable(id: String) {
+        val d = data()
+        if (d.optJSONObject("list")?.has(id) == true) {
+            d.put("current", id)
+            saveData(d)
+        }
+    }
+
+    fun deleteTimetable(id: String) {
+        val d = data()
+        val list = d.optJSONObject("list") ?: return
+        if (list.length() <= 1) return // 至少保留一个课表
+        list.remove(id)
+        if (d.optString("current") == id) {
+            val keys = list.keys()
+            d.put("current", if (keys.hasNext()) keys.next() else "default")
+        }
+        saveData(d)
+    }
+
+    private fun coursesToArray(courses: List<Course>): JSONArray {
         val arr = JSONArray()
         courses.forEach { c ->
             val sArr = JSONArray()
@@ -41,12 +150,7 @@ class TimetableStore(private val context: Context) {
             o.put("sessions", sArr)
             arr.put(o)
         }
-        prefs.edit().putString("courses_json", arr.toString()).apply()
-    }
-
-    fun loadCourses(): List<Course> {
-        val raw = prefs.getString("courses_json", null) ?: return emptyList()
-        return parseCourses(raw)
+        return arr
     }
 
     /** 内置默认课表（assets/default_timetable.json），首次安装无课表时使用 */

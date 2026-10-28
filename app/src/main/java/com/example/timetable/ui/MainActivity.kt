@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setOnClickListener {
             startActivity(Intent(this, ImportActivity::class.java))
         }
+        binding.btnTimetables.setOnClickListener { showTimetableManager() }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -127,8 +128,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadAndRender() {
         courses = store.loadCourses()
-        if (courses.isEmpty()) {
-            // 首次使用：加载内置默认课表（当前学期的软件开发方向课表）
+        // 仅首次安装（第一个课表 default 仍为空）时加载内置课表；
+        // 用户新建的空课表保持空白，不触发内置
+        if (courses.isEmpty() && store.currentTimetableId() == "default") {
             val defaults = store.loadDefaultCourses()
             if (defaults.isNotEmpty()) {
                 store.saveCourses(defaults)
@@ -137,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         }
         week = Timetable.currentWeek(store.termStart())
         render()
+        binding.tvTitle.text = store.currentTimetableName()
     }
 
     private fun render() {
@@ -583,4 +586,75 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    // ===== 课表管理：切换 / 新建 / 删除 =====
+
+    private fun showTimetableManager() {
+        if (editMode) {
+            Toast.makeText(this, "请先退出编辑模式再管理课表", Toast.LENGTH_SHORT).show()
+            return
+        }
+        refreshTimetableDialog()
+    }
+
+    private fun refreshTimetableDialog() {
+        val list = store.listTimetables()
+        val cur = store.currentTimetableId()
+        val ids = list.map { it.first }
+        val labels = list.map { it.second }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("课表管理（当前：${store.currentTimetableName()}）")
+            .setSingleChoiceItems(labels, ids.indexOf(cur).coerceAtLeast(0)) { d, which ->
+                store.switchTimetable(ids[which])
+                d.dismiss()
+                loadAndRender()
+                rebuildCourseList()
+            }
+            .setNeutralButton("新建空课表") { _, _ -> showCreateTimetableDialog() }
+            .setPositiveButton("删除当前课表") { _, _ -> showDeleteTimetableDialog() }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showCreateTimetableDialog() {
+        val et = EditText(this).apply {
+            hint = "课表名称，如「我的新课表」"
+            setText("课表 ${store.listTimetables().size + 1}")
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("新建空课表")
+            .setMessage("新课表从空白开始，与现有课表相互独立")
+            .setView(et)
+            .setPositiveButton("创建") { _, _ ->
+                val name = et.text.toString().trim().ifBlank { "新课表" }
+                store.createTimetable(name)
+                Toast.makeText(this, "已新建并切换到「$name」", Toast.LENGTH_SHORT).show()
+                loadAndRender()
+                rebuildCourseList()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showDeleteTimetableDialog() {
+        val id = store.currentTimetableId()
+        val name = store.currentTimetableName()
+        if (store.listTimetables().size <= 1) {
+            Toast.makeText(this, "至少保留一个课表，不能删除", Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("删除课表「$name」？")
+            .setMessage("删除后该课表的全部课程将丢失，无法恢复。")
+            .setPositiveButton("删除") { _, _ ->
+                store.deleteTimetable(id)
+                Toast.makeText(this, "已删除并切换到「${store.currentTimetableName()}」", Toast.LENGTH_SHORT).show()
+                loadAndRender()
+                rebuildCourseList()
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
 }
