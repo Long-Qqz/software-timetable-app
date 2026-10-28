@@ -14,6 +14,23 @@ import org.json.JSONObject
  */
 object LayoutAnalyzer {
 
+    /** 本课表已知的专业方向白名单（软件开发 + 大数据双方向）。
+     *  大模型常把教室/实验室名（如"智能硬件与物联网实验室"）误识别成专业方向，
+     *  白名单外的"方向"统一视为公共课（null）。 */
+    val KNOWN_MAJORS = listOf("软件开发", "大数据", "大数据技术")
+
+    /** 归一化专业方向：null/无/none 等字符串与白名单外值 → 真 null；"大数据技术"→"大数据" */
+    private fun normalizeMajor(raw: String): String? {
+        val t = raw.trim()
+        if (t.isEmpty() || t.equals("null", true) || t.equals("无", true) ||
+            t.equals("none", true) || t.equals("-", true)) return null
+        return when (t) {
+            "大数据技术" -> "大数据"
+            in KNOWN_MAJORS -> t
+            else -> null
+        }
+    }
+
     data class ParsedCourse(
         val course: Course,
         val major: String?      // 该课程的专业方向，null = 公共课/未标注
@@ -308,12 +325,7 @@ object LayoutAnalyzer {
                         val teacher = o.optString("teacher").trim()
                         val classes = o.optString("classes").trim()
                             .takeIf { it.isNotEmpty() && !it.equals("null", true) }
-                        val majorRaw = o.optString("major").trim()
-                        // 归一化：大模型常把 null 写成字符串 "null"/"无"/"none"，统一转回真 null（公共课）
-                        val major = majorRaw.takeUnless {
-                            it.isEmpty() || it.equals("null", true) || it.equals("无", true) ||
-                                it.equals("none", true) || it.equals("-", true)
-                        }
+                        val major = normalizeMajor(o.optString("major"))
 
                         val course = Course(
                             name = name,
@@ -357,7 +369,7 @@ object LayoutAnalyzer {
         return cleaned.joinToString(",")
     }
 
-    /** 大模型结果里汇总专业方向 */
+    /** 大模型结果里汇总专业方向（仅保留白名单内的真实方向） */
     fun extractMajorsFromJson(courses: List<ParsedCourse>): List<String> =
         courses.mapNotNull { it.major }.distinct()
 }
